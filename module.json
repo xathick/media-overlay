@@ -3,19 +3,26 @@
   "title": "Media Overlay",
   "description": "Muestra una imagen o video superpuesto sobre la escena.",
   "version": "1.0.0",
-  "compatibility": { "minimum": "13", "verified": "13" },
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13",
+    "maximum": "13"
+  },
   "authors": [
-        {
-            "name": "Xathick",
-            "discord": "Xathick#2564"
-        }
-    ],
+    {
+      "name": "Xathick",
+      "discord": "Xathick#2564",
+      "url": "https://github.com/xathick"
+    }
+  ],
   "esmodules": ["module/media-overlay.js"],
   "styles": ["styles/media-overlay.css"],
   "url": "https://github.com/xathick/media-overlay",
-  "manifest": "",
-  "download": "",
-  "socket": true,
-  "manifest": "https://github.com/xathick/fvtt-dice-tray/releases/latest/download/module.json",
-  "download": "https://github.com/xathick/fvtt-dice-tray/releases/download/1.0.0/media-overlay.zip"
+  "readme": "https://github.com/xathick/media-overlay#readme",
+  "bugs": "https://github.com/xathick/media-overlay/issues",
+  "changelog": "https://github.com/xathick/media-overlay/releases",
+  "license": "MIT",
+  "manifest": "https://raw.githubusercontent.com/xathick/media-overlay/main/module.json",
+  "download": "https://github.com/xathick/media-overlay/releases/download/v1.0.0/media-overlay-1.0.0.zip",
+  "socket": true
 }
