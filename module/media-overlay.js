@@ -1,6 +1,4 @@
 // ===== media-overlay.js =====
-// v2.2 — Sticky overlay + loader con progreso + cartel título interno + edición y librería + form colapsable.
-// Requisitos visuales: ver CSS correspondiente (loader, fades, cartel, toggle).
 
 const MOD_ID = "media-overlay";
 const SETTING_ENTRIES = "entries";
@@ -117,6 +115,7 @@ Hooks.once("ready", () => {
   });
 });
 
+/* Restaurar overlay activo al cargar/cambiar canvas */
 function restoreActiveOverlay() {
   try {
     if (STICKY_ON_SCENE_CHANGE && Overlay.isVisible()) {
@@ -198,7 +197,7 @@ async function hideForAll() {
 /* ───────── Overlay ───────── */
 const Overlay = {
   _progressTimer: null,
-  _loadToken: null,   // token de la carga en curso (para filtrar errores “fantasma”)
+  _loadToken: null, 
 
   ensureRoot(){
     let root = document.getElementById("mo-overlay-root");
@@ -350,6 +349,7 @@ const Overlay = {
       if (this._loadToken !== token || loaded) return;
       this._hideLoader();
       ui.notifications.error(msg);
+      ui.controls?.render?.();
     };
 
     // Watchdog: 8s sin “ready”
@@ -359,13 +359,15 @@ const Overlay = {
 
     // Listo para mostrar
     const onReady = () => {
-      if (this._loadToken !== token) return; // se inició otra carga
+      if (this._loadToken !== token) return; 
       loaded = true;
       clearTimeout(watchdog);
       requestAnimationFrame(() => {
         el.classList.add("is-visible");
         if (el.tagName === "VIDEO") el.play().catch(()=>{});
         this._hideLoader(); // fade-out loader
+        root.style.display = "block";
+        ui.controls?.render?.(); 
       });
     };
 
@@ -448,8 +450,6 @@ const Overlay = {
     root.querySelector("[data-action='close']").onclick = () => {
       if (game.user.isGM) hideForAll(); else this.hideLocal();
     };
-
-    root.style.display = "block";
   },
 
   hideLocal(){
@@ -466,7 +466,12 @@ const Overlay = {
     if (textEl)    textEl.classList.remove("is-visible");
 
     const media = root.querySelector("#mo-overlay-media");
-    if (!media) { root.style.display = "none"; this._toggleVideoControls(false); return; }
+    if (!media) {
+      root.style.display = "none";
+      this._toggleVideoControls(false);
+      ui.controls?.render?.(); 
+      return;
+    }
     media.classList.remove("is-visible");
     media.classList.add("mo-fade");
     const finish = () => {
@@ -474,6 +479,7 @@ const Overlay = {
       media.remove();
       root.style.display = "none";
       this._toggleVideoControls(false);
+      ui.controls?.render?.(); 
     };
     media.addEventListener("transitionend", finish, { once: true });
     setTimeout(finish, 1000);
@@ -487,7 +493,7 @@ console.log("ApplicationV2 typeof:", typeof foundry?.applications?.api?.Applicat
 class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
     id: "media-picker",
-    window: { title: "Media Overlay", icon: "fas fa-photo-film" },
+    window: { title: "Selector Media Overlay", icon: "fas fa-photo-film" },
     position: { width: 620, height: "auto" }
   };
 
@@ -517,7 +523,7 @@ class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
         </div>`;
     }).join("");
 
-    // Estado del colapsable (por defecto cerrado)
+    // Estado del colapsable: por defecto CERRADO (persistente mientras la app esté abierta)
     const open = this._addOpen === true;
 
     return `
@@ -557,7 +563,7 @@ class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
         </fieldset>
 
         <fieldset style="padding:8px;">
-          <legend>Librería de medios</legend>
+          <legend>Librería</legend>
           <div id="mo-grid" class="mo-grid">
             ${gridItems || `<div class="mo-empty">No hay medios aún. Añade alguno arriba.</div>`}
           </div>
@@ -572,9 +578,9 @@ class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
     const html    = (a instanceof Element) ? b : a;
     element.innerHTML = html;
 
-    this._root = element;             // cache root para resaltar selección
+    this._root = element;             
     this._attachListeners(element);
-    this.updateSelectionFromScene();  // pinta selección activa al abrir
+    this.updateSelectionFromScene(); 
   }
 
   /* === Listeners y manejo de UI === */
@@ -597,7 +603,7 @@ class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
           if (ic) ic.className = open ? "fas fa-chevron-up" : "fas fa-chevron-down";
         }
       };
-      if (this._addOpen === undefined) this._addOpen = false; // por defecto cerrado
+      if (this._addOpen === undefined) this._addOpen = false; // por defecto CERRADO
       apply();
       btn?.addEventListener("click", () => { this._addOpen = !this._addOpen; apply(); });
     }
@@ -732,8 +738,8 @@ class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
           await hideForAll();
           this.selectedId = null;
         } else {
-          Overlay.render(entry);     // feedback local
-          await showToAll(entry);    // sincroniza
+          Overlay.render(entry);    
+          await showToAll(entry);    
           this.selectedId = id;
         }
         this._highlightSelection();
@@ -833,3 +839,62 @@ class MediaPickerApp extends foundry.applications.api.ApplicationV2 {
     });
   }
 }
+
+/* ───────── Scene Controls (compat v12/v13) ───────── */
+Hooks.on("getSceneControlButtons", (controls) => {
+  const CONTROL_NAME = "media-overlay";
+
+  // Definición común del control (v13 usa tools como Record, v12 como Array)
+  const controlV13 = {
+    name: CONTROL_NAME,
+    title: "Media Overlay",
+    icon: "fas fa-photo-film",
+    visible: game.user.isGM === true,
+    // En v13 tools es un objeto de { [toolName]: SceneControlTool }
+    tools: {
+      "toggle-picker": {
+        name: "toggle-picker",
+        title: "Abrir/cerrar selector",
+        icon: "fas fa-list",
+        button: true,
+        order: 10,
+        onChange: () => Hooks.callAll("mediaOverlay:togglePicker")
+      },
+      "hide-overlay": {
+        name: "hide-overlay",
+        title: "Ocultar overlay",
+        icon: "fas fa-eye-slash",
+        button: true,
+        order: 20,
+        onChange: async () => { try { Overlay.hideLocal(); await hideForAll(); } catch(e) { console.error(e); } }
+      }
+    }
+  };
+
+  // ¿Objeto (v13) o array (v12)?
+  const isV13 = controls && !Array.isArray(controls) && typeof controls === "object" && !("length" in controls);
+
+  if (isV13) {
+    // v13: añadir directamente por clave
+    controls[CONTROL_NAME] = controlV13;
+  } else if (Array.isArray(controls)) {
+    // v12: convertir tools a array ordenado y pushear
+    const toolsArray = Object.values(controlV13.tools)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map(t => {
+        // v12 usa onClick; onChange no existe. Adaptamos:
+        const { onChange, ...rest } = t;
+        return { ...rest, onClick: onChange ?? (() => {}) };
+      });
+
+    controls.push({
+      name: controlV13.name,
+      title: controlV13.title,
+      icon: controlV13.icon,
+      layer: null,
+      visible: controlV13.visible,
+      tools: toolsArray
+    });
+  }
+});
+
