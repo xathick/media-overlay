@@ -1,0 +1,14 @@
+{
+  "id": "media-overlay",
+  "title": "Media Overlay (v13)",
+  "description": "Muestra una imagen o video superpuesto sobre la escena, elegido desde una librería compartida.",
+  "version": "1.0.0",
+  "compatibility": { "minimum": "13", "verified": "13" },
+  "authors": [{ "name": "Sam (ChatGPT)", "url": "https://example.com" }],
+  "esmodules": ["module/media-overlay.js"],
+  "styles": ["styles/media-overlay.css"],
+  "url": "",
+  "manifest": "",
+  "download": "",
+  "socket": true
+}
